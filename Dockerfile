@@ -1,4 +1,4 @@
-FROM golang:1.19.4 as build
+FROM golang:1.21.1-bullseye as build
 
 WORKDIR /app
 
@@ -26,7 +26,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     go build $GO_ARGS -o /app/outbin
 
 # Need glibc
-FROM gcr.io/distroless/base
+FROM gcr.io/distroless/base-debian11
 
 ENTRYPOINT ["/app/outbin"]
 COPY --from=build /app/outbin /app/

@@ -45,13 +45,13 @@ func GetEnvOrDefaultInt(env string, defaultVal int64) int64 {
 	if e == "" {
 		return defaultVal
 	} else {
-		intVal, err := strconv.ParseInt(e, 10, 16)
+		intVal, err := strconv.ParseInt(e, 10, 64)
 		if err != nil {
 			logger.Error().Msg(fmt.Sprintf("Failed to parse string to int '%s'", env))
 			os.Exit(1)
 		}
 
-		return (intVal)
+		return intVal
 	}
 }
 
