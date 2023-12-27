@@ -140,6 +140,8 @@ func verifyAWSRequest(next echo.HandlerFunc) echo.HandlerFunc {
 			return ErrInvalidSignature
 		}
 
+		// TODO: Verify action against the policy
+
 		cc, _ := c.(*CustomContext)
 		cc.AWSCredentials = parsedHeader.Credential
 
