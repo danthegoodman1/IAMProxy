@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/danthegoodman1/GoAPITemplate/observability"
-	"github.com/danthegoodman1/GoAPITemplate/temporal"
 	"github.com/joho/godotenv"
 	"net/http"
 	"os"
@@ -13,10 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/danthegoodman1/GoAPITemplate/crdb"
 	"github.com/danthegoodman1/GoAPITemplate/gologger"
 	"github.com/danthegoodman1/GoAPITemplate/http_server"
-	"github.com/danthegoodman1/GoAPITemplate/migrations"
 	"github.com/danthegoodman1/GoAPITemplate/utils"
 )
 
@@ -32,17 +29,6 @@ func main() {
 	}
 	logger.Debug().Msg("starting Tangia mono api")
 
-	if err := crdb.ConnectToDB(); err != nil {
-		logger.Error().Err(err).Msg("error connecting to CRDB")
-		os.Exit(1)
-	}
-
-	err := migrations.CheckMigrations(utils.CRDB_DSN)
-	if err != nil {
-		logger.Error().Err(err).Msg("Error checking migrations")
-		os.Exit(1)
-	}
-
 	prometheusReporter := observability.NewPrometheusReporter()
 	go func() {
 		err := observability.StartInternalHTTPServer(":8042", prometheusReporter)
@@ -51,12 +37,6 @@ func main() {
 			os.Exit(1)
 		}
 	}()
-
-	err = temporal.Run(context.Background(), prometheusReporter)
-	if err != nil {
-		logger.Error().Err(err).Msg("Temporal init error")
-		os.Exit(1)
-	}
 
 	httpServer := http_server.StartHTTPServer()
 
