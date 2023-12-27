@@ -1,13 +1,16 @@
 package http_server
 
 import (
+	"github.com/danthegoodman1/GoAPITemplate/tracing"
 	"github.com/danthegoodman1/GoAPITemplate/utils"
 	"github.com/rs/zerolog"
 	"net/http"
 )
 
 func (s *HTTPServer) ProxyRequest(c *CustomContext) error {
-	logger := zerolog.Ctx(c.Request().Context())
+	ctx, span := tracing.Tracer.Start(c.Request().Context(), "ProxyRequest")
+	defer span.End()
+	logger := zerolog.Ctx(ctx)
 
 	logger.Debug().Str("authHeader", c.Request().Header.Get("Authorization")).Msg("proxying request")
 
@@ -22,7 +25,7 @@ func (s *HTTPServer) ProxyRequest(c *CustomContext) error {
 	req.Header = headers
 
 	req.Header.Add("x-req-id", c.RequestID)
-	// TODO: Add tracing headers
+	req.Header.Add("x-span-id", span.SpanContext().SpanID().String())
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
