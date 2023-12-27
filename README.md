@@ -1,15 +1,12 @@
-# GoAPITemplate
+# AWS IAM Proxy
 
-## Log Context
+<!-- TOC -->
+* [AWS IAM Proxy](#aws-iam-proxy)
+  * [Added Headers](#added-headers)
+<!-- TOC -->
 
-The thing that gives logging a separate context is the function call:
+## Added Headers
 
-```go
-logger := gologger.NewLogger()
-// ...
-ctx = logger.WithContext(ctx)
-```
+`x-req-id`: The request ID, for log association
 
-Otherwise all logging will share the context (weird I know).
-
-From here you can use `logger := zerolog.Ctx(ctx)`
+`x-span-id`: The OTLP span ID of the request if tracing is enabled.

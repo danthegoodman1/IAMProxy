@@ -27,7 +27,7 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	logger.Debug().Msg("starting Tangia mono api")
+	logger.Debug().Msg("starting IAM Proxy api")
 
 	prometheusReporter := observability.NewPrometheusReporter()
 	go func() {

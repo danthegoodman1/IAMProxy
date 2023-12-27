@@ -48,7 +48,7 @@ func StartHTTPServer() *HTTPServer {
 
 	// technical - no auth
 	s.Echo.GET("/hc", s.HealthCheck)
-
+	s.Echo.Any("/*", ccHandler(s.ProxyRequest), verifyAWSRequest)
 	s.Echo.Listener = listener
 	go func() {
 		logger.Info().Msg("starting h2c server on " + listener.Addr().String())
