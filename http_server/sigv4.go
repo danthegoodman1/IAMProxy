@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
+	"github.com/danthegoodman1/GoAPITemplate/control_plane"
 	"github.com/labstack/echo/v4"
 	"github.com/samber/lo"
 	"sort"
@@ -132,15 +133,16 @@ func verifyAWSRequest(next echo.HandlerFunc) echo.HandlerFunc {
 		parsedHeader := parseAuthHeader(c.Request().Header.Get("Authorization"))
 		canonicalRequest := getCanonicalRequest(c)
 		stringToSign := getStringToSign(c, canonicalRequest)
-		// TODO: get real password with lookup
-		signingKey := getSigningKey(c, "icepassword")
+		user, err := control_plane.GetKey(c.Request().Context(), parsedHeader.Credential.KeyID)
+		if err != nil {
+			return fmt.Errorf("error in control_plane.GetKey: %w", err)
+		}
+		signingKey := getSigningKey(c, user.SecretKey)
 		signature := fmt.Sprintf("%x", getHMAC(signingKey, []byte(stringToSign)))
 
 		if signature != parsedHeader.Signature {
 			return ErrInvalidSignature
 		}
-
-		// TODO: Verify action against the policy
 
 		cc, _ := c.(*CustomContext)
 		cc.AWSCredentials = parsedHeader.Credential

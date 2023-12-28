@@ -2,7 +2,6 @@ package control_plane
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,7 +21,7 @@ var (
 	ErrHighStatusCode = errors.New("high status code")
 
 	poolServer               *http.Server
-	UserPoliciesGroupCache   *groupcache.Group
+	KeyGroupCache            *groupcache.Group
 	ResourcePolicyGroupCache *groupcache.Group
 )
 
@@ -50,14 +49,14 @@ func InitCache(ctx context.Context) {
 		}
 	}()
 
-	UserPoliciesGroupCache = groupcache.NewGroup("key", utils.Env_UserPoliciesCacheMB, groupcache.GetterFunc(
+	KeyGroupCache = groupcache.NewGroup("key", utils.Env_KeyCacheMB, groupcache.GetterFunc(
 		func(ctx context.Context, fqdn string, dest groupcache.Sink) error {
-			userPolicyBytes, err := getUserPolicies(ctx, fqdn)
+			userBytes, err := getKey(ctx, fqdn)
 			if err != nil {
-				return fmt.Errorf("error in getUserPolicies: %w", err)
+				return fmt.Errorf("error in getKey: %w", err)
 			}
 
-			return dest.SetBytes(userPolicyBytes, time.Now().Add(time.Second*time.Duration(utils.UserPoliciesCacheSeconds)))
+			return dest.SetBytes(userBytes, time.Now().Add(time.Second*time.Duration(utils.Env_KeyCacheSeconds)))
 		},
 	))
 
@@ -78,13 +77,13 @@ func StopCache(ctx context.Context) error {
 }
 
 // Bytes of routing.Config
-func getUserPolicies(ctx context.Context, fqdn string) ([]byte, error) {
-	ctx, span := tracing.Tracer.Start(ctx, "getUserPolicies")
+func getKey(ctx context.Context, keyID string) ([]byte, error) {
+	ctx, span := tracing.Tracer.Start(ctx, "getKey")
 	defer span.End()
-	span.SetAttributes(attribute.String("fqdn", fqdn))
+	span.SetAttributes(attribute.String("keyID", keyID))
 	span.SetAttributes(attribute.Bool("cached", false))
 
-	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/domains/%s/config", utils.Env_ControlPlaneAddr, fqdn), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/key/%s", utils.Env_ControlPlaneAddr, keyID), nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating new request: %w", err)
 	}
@@ -139,65 +138,30 @@ func getResourcePolicyBytes(ctx context.Context, fqdn string) ([]byte, error) {
 	return resBytes, nil
 }
 
-func GetUserPolicies(ctx context.Context, fqdn string) (*routing.Config, error) {
-	ctx, span := tracing.Tracer.Start(ctx, "GetUserPolicies")
+func GetKey(ctx context.Context, keyID string) (*Key, error) {
+	ctx, span := tracing.Tracer.Start(ctx, "GetKey")
 	defer span.End()
-	span.SetAttributes(attribute.String("fqdn", fqdn))
+	span.SetAttributes(attribute.String("keyID", keyID))
 
 	var b []byte
 	var err error
 	if utils.CacheEnabled {
-		err = FQDNGroupCache.Get(ctx, fqdn, groupcache.AllocatingByteSliceSink(&b))
+		err = KeyGroupCache.Get(ctx, keyID, groupcache.AllocatingByteSliceSink(&b))
 		if err != nil {
 			return nil, fmt.Errorf("error getting from groupcache: %w", err)
 		}
 	} else {
-		b, err = getUserPolicies(ctx, fqdn)
+		b, err = getKey(ctx, keyID)
 		if err != nil {
-			return nil, fmt.Errorf("error in getUserPolicies: %w", err)
+			return nil, fmt.Errorf("error in getKey: %w", err)
 		}
 	}
 
-	fmt.Printf("got fqdn bytes %s\n", b)
-
-	var config routing.Config
-	err = json.Unmarshal(b, &config)
+	var user Key
+	err = json.Unmarshal(b, &user)
 	if err != nil {
 		return nil, fmt.Errorf("error in json.Unmarshal: %w", err)
 	}
 
-	return &config, nil
-}
-
-func GetResourcePolicy(ctx context.Context, fqdn string) (*tls.Certificate, error) {
-	ctx, span := tracing.GildraTracer.Start(ctx, "GetResourcePolicy")
-	defer span.End()
-	span.SetAttributes(attribute.String("fqdn", fqdn))
-
-	var b []byte
-	var err error
-	if utils.CacheEnabled {
-		err = CertGroupCache.Get(ctx, fqdn, groupcache.AllocatingByteSliceSink(&b))
-		if err != nil {
-			return nil, fmt.Errorf("error getting from groupcache: %w", err)
-		}
-	} else {
-		b, err = getResourcePolicyBytes(ctx, fqdn)
-		if err != nil {
-			return nil, fmt.Errorf("error in getResourcePolicyBytes: %w", err)
-		}
-	}
-
-	var cert GetCertRes
-	err = json.Unmarshal(b, &cert)
-	if err != nil {
-		return nil, fmt.Errorf("error in json.Unmarshal: %w", err)
-	}
-
-	c, err := cert.GetCert()
-	if err != nil {
-		return nil, fmt.Errorf("error in cert.GetCert(): %w", err)
-	}
-
-	return c, nil
+	return &user, nil
 }
