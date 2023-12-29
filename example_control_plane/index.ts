@@ -9,7 +9,8 @@ interface Key {
     SecretKey: string
 }
 
-app.post('/key/:keyID', async (req: Request<{keyID: string}, Key>, res) => {
+app.get('/key/:keyID', async (req: Request<{keyID: string}, Key>, res) => {
+    console.log("serving key", req.params.keyID)
     res.json({
         KeyID: "testuser",
         SecretKey: "testpassword",

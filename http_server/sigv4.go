@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
+	"github.com/danthegoodman1/GoAPITemplate/control_plane"
 	"github.com/danthegoodman1/GoAPITemplate/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
@@ -136,11 +137,11 @@ func verifyAWSRequest(next echo.HandlerFunc) echo.HandlerFunc {
 		parsedHeader := parseAuthHeader(c.Request().Header.Get("Authorization"))
 		canonicalRequest := getCanonicalRequest(c)
 		stringToSign := getStringToSign(c, canonicalRequest)
-		// user, err := control_plane.GetKey(c.Request().Context(), parsedHeader.Credential.KeyID)
-		// if err != nil {
-		// 	return fmt.Errorf("error in control_plane.GetKey: %w", err)
-		// }
-		signingKey := getSigningKey(c, "testpassword")
+		user, err := control_plane.GetKey(c.Request().Context(), parsedHeader.Credential.KeyID)
+		if err != nil {
+			return fmt.Errorf("error in control_plane.GetKey: %w", err)
+		}
+		signingKey := getSigningKey(c, user.SecretKey)
 		signature := fmt.Sprintf("%x", getHMAC(signingKey, []byte(stringToSign)))
 
 		if signature != parsedHeader.Signature {
