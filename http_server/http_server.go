@@ -50,6 +50,7 @@ func StartHTTPServer() *HTTPServer {
 	s.Echo.GET("/hc", s.HealthCheck)
 	s.Echo.Any("/*", ccHandler(s.ProxyRequest), verifyAWSRequest)
 	s.Echo.Listener = listener
+	s.Echo.HTTPErrorHandler = customHTTPErrorHandler
 	go func() {
 		logger.Info().Msg("starting h2c server on " + listener.Addr().String())
 		err := s.Echo.StartH2CServer("", &http2.Server{})
@@ -114,4 +115,21 @@ func LoggerMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		logger.Debug().Str("method", req.Method).Str("remote_ip", c.RealIP()).Str("req_uri", req.RequestURI).Str("handler_path", c.Path()).Str("path", p).Int("status", res.Status).Int64("latency_ns", int64(stop)).Str("protocol", req.Proto).Str("bytes_in", cl).Int64("bytes_out", res.Size).Msg("req recived")
 		return nil
 	}
+}
+
+func customHTTPErrorHandler(err error, c echo.Context) {
+	code := http.StatusInternalServerError
+	var msg any = "internal error"
+	if he, ok := err.(*echo.HTTPError); ok {
+		code = he.Code
+		msg = he.Message
+	}
+	logger := zerolog.Ctx(c.Request().Context())
+	logger.Warn().Err(err).Msg("handler error")
+	reqID := "<no req id>"
+	if rid, ok := c.Request().Context().Value(gologger.ReqIDKey).(string); ok {
+		reqID = rid
+	}
+
+	c.String(code, fmt.Sprintf("%s: %v", reqID, msg))
 }
