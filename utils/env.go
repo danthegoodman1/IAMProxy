@@ -24,6 +24,9 @@ var (
 	Env_ControlPlaneAddr       = os.Getenv("CONTROL_PLANE_ADDR")
 	Env_ControlPlaneAuthHeader = os.Getenv("CONTROL_PLANE_AUTH")
 
+	Env_AWSService = os.Getenv("AWS_SERVICE")
+	Env_Region     = os.Getenv("REGION")
+
 	Env_ResourcePolicyCacheMB      = MustEnvOrDefaultInt64("RESOURCE_POLICIES_CACHE_MB", 10_000_000)
 	Env_ResourcePolicyCacheSeconds = MustEnvOrDefaultInt64("RESOURCE_POLICIES_CACHE_SECONDS", 300)
 )

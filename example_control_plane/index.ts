@@ -17,6 +17,15 @@ app.post('/key/:keyID', async (req: Request<{keyID: string}, Key>, res) => {
     })
 })
 
+app.post('/', async (req: Request, res) => {
+    console.log("got req for root")
+    res.json({
+        KeyID: "testuser",
+        SecretKey: "testpassword",
+        UserID: "testid"
+    })
+})
+
 app.listen('8888', () => {
     console.log('listening on port 8888')
 })

@@ -3,6 +3,7 @@ package http_server
 import (
 	"github.com/danthegoodman1/GoAPITemplate/tracing"
 	"github.com/danthegoodman1/GoAPITemplate/utils"
+	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
 	"net/http"
 )
@@ -16,7 +17,7 @@ func (s *HTTPServer) ProxyRequest(c *CustomContext) error {
 
 	req, err := http.NewRequestWithContext(c.Request().Context(), c.Request().Method, utils.Env_ProxyEndpoint, nil)
 	if err != nil {
-		return c.InternalError(err, "error making new request for proxying")
+		return echo.NewHTTPError(http.StatusInternalServerError, "error making new request for proxying")
 	}
 
 	// Copy headers
@@ -29,7 +30,7 @@ func (s *HTTPServer) ProxyRequest(c *CustomContext) error {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return c.InternalError(err, "error doing proxy request")
+		return echo.NewHTTPError(http.StatusInternalServerError, "error doing proxy request")
 	}
 	defer res.Body.Close()
 

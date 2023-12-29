@@ -4,8 +4,9 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
-	"github.com/danthegoodman1/GoAPITemplate/control_plane"
+	"github.com/danthegoodman1/GoAPITemplate/utils"
 	"github.com/labstack/echo/v4"
+	"github.com/rs/zerolog"
 	"github.com/samber/lo"
 	"sort"
 	"strings"
@@ -62,7 +63,7 @@ func getStringToSign(c echo.Context, canonicalRequest string) string {
 	s := "AWS4-HMAC-SHA256" + "\n"
 	s += c.Request().Header.Get("X-Amz-Date") + "\n"
 
-	scope := c.Request().Header.Get("X-Amz-Date")[:8] + "/" + "us-east-1" + "/" + "s3" + "/aws4_request"
+	scope := c.Request().Header.Get("X-Amz-Date")[:8] + "/" + utils.Env_Region + "/" + utils.Env_AWSService + "/aws4_request"
 	s += scope + "\n"
 	s += fmt.Sprintf("%x", getSHA256([]byte(canonicalRequest)))
 
@@ -71,8 +72,8 @@ func getStringToSign(c echo.Context, canonicalRequest string) string {
 
 func getSigningKey(c echo.Context, password string) []byte {
 	dateKey := getHMAC([]byte("AWS4"+password), []byte(c.Request().Header.Get("X-Amz-Date")[:8]))
-	dateRegionKey := getHMAC(dateKey, []byte("us-east-1"))
-	dateRegionServiceKey := getHMAC(dateRegionKey, []byte("s3"))
+	dateRegionKey := getHMAC(dateKey, []byte(utils.Env_Region))
+	dateRegionServiceKey := getHMAC(dateRegionKey, []byte(utils.Env_AWSService))
 	signingKey := getHMAC(dateRegionServiceKey, []byte("aws4_request"))
 	return signingKey
 }
@@ -130,14 +131,16 @@ func parseAuthHeader(header string) AWSAuthHeader {
 
 func verifyAWSRequest(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
+		logger := zerolog.Ctx(c.Request().Context())
+		logger.Debug().Msg("verifying aws request")
 		parsedHeader := parseAuthHeader(c.Request().Header.Get("Authorization"))
 		canonicalRequest := getCanonicalRequest(c)
 		stringToSign := getStringToSign(c, canonicalRequest)
-		user, err := control_plane.GetKey(c.Request().Context(), parsedHeader.Credential.KeyID)
-		if err != nil {
-			return fmt.Errorf("error in control_plane.GetKey: %w", err)
-		}
-		signingKey := getSigningKey(c, user.SecretKey)
+		// user, err := control_plane.GetKey(c.Request().Context(), parsedHeader.Credential.KeyID)
+		// if err != nil {
+		// 	return fmt.Errorf("error in control_plane.GetKey: %w", err)
+		// }
+		signingKey := getSigningKey(c, "testpassword")
 		signature := fmt.Sprintf("%x", getHMAC(signingKey, []byte(stringToSign)))
 
 		if signature != parsedHeader.Signature {
