@@ -5,6 +5,10 @@
   * [Added Headers](#added-headers)
 <!-- TOC -->
 
+## Running
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Added Headers
 
 `x-req-id`: The request ID, for log association
