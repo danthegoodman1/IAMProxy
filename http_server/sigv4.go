@@ -9,6 +9,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
+	"net/http"
 	"sort"
 	"strings"
 )
@@ -139,7 +140,7 @@ func verifyAWSRequest(next echo.HandlerFunc) echo.HandlerFunc {
 		stringToSign := getStringToSign(c, canonicalRequest)
 		user, err := control_plane.GetKey(c.Request().Context(), parsedHeader.Credential.KeyID)
 		if err != nil {
-			return fmt.Errorf("error in control_plane.GetKey: %w", err)
+			return echo.NewHTTPError(http.StatusBadRequest, "error in control_plane.GetKey")
 		}
 		signingKey := getSigningKey(c, user.SecretKey)
 		signature := fmt.Sprintf("%x", getHMAC(signingKey, []byte(stringToSign)))
