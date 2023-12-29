@@ -2,6 +2,7 @@
 
 <!-- TOC -->
 * [AWS IAM Proxy](#aws-iam-proxy)
+  * [Running](#running)
   * [Added Headers](#added-headers)
 <!-- TOC -->
 
